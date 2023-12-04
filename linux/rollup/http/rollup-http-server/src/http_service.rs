@@ -117,13 +117,13 @@ async fn ipfs_put(content: Bytes, cid: web::Path<String>) -> HttpResponse {
 }
 
 #[actix_web::get("/get_tx")]
-async fn get_tx(cid: web::Path<String>, data: Data<Mutex<Context>>) -> HttpResponse {
+async fn get_tx() -> HttpResponse {
 
     let mut file = OpenOptions::new()
         .write(true)
         .open(std::env::var("IO_DEVICE").unwrap()).unwrap();
 
-    file.seek(SeekFrom::Start(1)).unwrap();
+    file.seek(SeekFrom::Start(0)).unwrap();
     file.write(&GET_TX.to_be_bytes()).unwrap();
     file.sync_all().unwrap();
 
