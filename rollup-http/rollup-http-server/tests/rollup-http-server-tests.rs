@@ -19,19 +19,19 @@ extern crate rollup_http_server;
 
 use actix_server::ServerHandle;
 use async_mutex::Mutex;
+use rand::Rng;
 use rollup_http_client::rollup::{
-    Exception, Notice, Report, RollupRequest, RollupResponse, Voucher, GIORequest,
+    Exception, GIORequest, Notice, Report, RollupRequest, RollupResponse, Voucher,
 };
 use rollup_http_server::config::Config;
 use rollup_http_server::rollup::RollupFd;
 use rollup_http_server::*;
 use rstest::*;
-use std::future::Future;
-use std::sync::Arc;
-use rand::Rng;
 use std::env;
 use std::fs::File;
+use std::future::Future;
 use std::io::Write;
+use std::sync::Arc;
 
 const HOST: &str = "127.0.0.1";
 
@@ -123,7 +123,8 @@ async fn test_finish_request(
      * cast calldata 'EvmAdvance(uint256,address,address,uint256,uint256,uint256,bytes)' \
      *      0 $(cast address-zero) $(printf 0x%040x 1) 0 0 0 0xdeadbeef | xxd -r -p
      */
-    let advance_payload_data = "cc7dee1f00000000000000000000000000000000000000000000000000000000000\
+    let advance_payload_data =
+        "cc7dee1f00000000000000000000000000000000000000000000000000000000000\
                                 0000000000000000000000000000000000000000000000000000000000000000000\
                                 0000000000000000000000000000000000000000000000000000000000000000010\
                                 0000000000000000000000000000000000000000000000000000000000000000000\
@@ -148,7 +149,10 @@ async fn test_finish_request(
     let mut inspect_file = File::create(inspect_path)?;
     inspect_file.write_all(&inspect_binary_data)?;
 
-    env::set_var("CMT_INPUTS", format!("0:{0},1:{1}", advance_path, inspect_path));
+    env::set_var(
+        "CMT_INPUTS",
+        format!("0:{0},1:{1}", advance_path, inspect_path),
+    );
     env::set_var("CMT_DEBUG", "yes");
 
     let context = context_future.await;
@@ -169,10 +173,7 @@ async fn test_finish_request(
                     advance_request.metadata.msg_sender,
                     "0x0000000000000000000000000000000000000001"
                 );
-                assert_eq!(
-                    &advance_request.payload[2..],
-                    "deadbeef"
-                );
+                assert_eq!(&advance_request.payload[2..], "deadbeef");
             }
         },
         Err(err) => {
@@ -187,10 +188,7 @@ async fn test_finish_request(
                 println!("Got new inspect request: {:?}", inspect_request);
                 context.server_handle.stop(true).await;
                 assert_eq!(inspect_request.payload.len(), 10);
-                assert_eq!(
-                    &inspect_request.payload[2..],
-                    "deadbeef"
-                );
+                assert_eq!(&inspect_request.payload[2..], "deadbeef");
             }
             RollupRequest::Advance(_advance_request) => {
                 context.server_handle.stop(true).await;
@@ -210,18 +208,20 @@ async fn test_finish_request(
     Ok(())
 }
 
-fn check_voucher_or_fail(
-    original_voucher: Voucher,
-    output_filename: &str,
-) {
+fn check_voucher_or_fail(original_voucher: Voucher, output_filename: &str) {
     // we try to decode the produced voucher with a third-party lib to see if it matches
     // the expected values
-    let data =
-         std::fs::read(output_filename).expect("error reading voucher file");
+    let data = std::fs::read(output_filename).expect("error reading voucher file");
     let decoded_voucher = ethabi::decode(
-        &[ethabi::ParamType::Address, ethabi::ParamType::Uint(256), ethabi::ParamType::Bytes],
+        &[
+            ethabi::ParamType::Address,
+            ethabi::ParamType::Uint(256),
+            ethabi::ParamType::Bytes,
+        ],
         &data[4..], // skip the first 4 bytes that are the function signature
-    ).ok().unwrap();
+    )
+    .ok()
+    .unwrap();
 
     assert_eq!(
         "0x".to_string() + &decoded_voucher[0].to_string(),
@@ -286,12 +286,13 @@ async fn test_write_notice(
 
     // we try to decode the produced voucher with a third-party lib to see if it matches
     // the expected values
-    let data =
-        std::fs::read("none.output-0.bin").expect("error reading test notice file");
+    let data = std::fs::read("none.output-0.bin").expect("error reading test notice file");
     let decoded_notice = ethabi::decode(
         &[ethabi::ParamType::Bytes],
         &data[4..], // skip the first 4 bytes that are the function signature
-    ).ok().unwrap();
+    )
+    .ok()
+    .unwrap();
 
     assert_eq!(
         "0x".to_string() + &decoded_notice[0].to_string(),
@@ -318,10 +319,7 @@ async fn test_write_report(
     //Read text file with results
     let report1 =
         std::fs::read_to_string("none.report-0.bin").expect("error reading test report file");
-    assert_eq!(
-        report1,
-        "report test payload 01"
-    );
+    assert_eq!(report1, "report test payload 01");
     std::fs::remove_file("none.report-0.bin")?;
 
     Ok(())
@@ -343,12 +341,8 @@ async fn test_gio_request(
     context.server_handle.stop(true).await;
 
     //Read text file with results
-    let gio =
-        std::fs::read_to_string("none.gio-0.bin").expect("error reading test gio file");
-    assert_eq!(
-        gio,
-        "gio test payload 01"
-    );
+    let gio = std::fs::read_to_string("none.gio-0.bin").expect("error reading test gio file");
+    assert_eq!(gio, "gio test payload 01");
     std::fs::remove_file("none.gio-0.bin")?;
 
     Ok(())
